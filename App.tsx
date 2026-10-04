@@ -6,6 +6,7 @@
  */
 
 import React, { useState } from 'react';
+import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -17,11 +18,22 @@ import GerenciarScreen from './src/screens/Gerenciar/GerenciarScreen';
 import RelatorioScreen from './src/screens/Relatorio/RelatorioScreen';
 import CozinhaMonitorScreen from './src/screens/Cozinha/CozinhaMonitorScreen';
 import ConfigScreen from './src/screens/Config/ConfigScreen';
+import LoginScreen from './src/screens/Login/LoginScreen';
+import { AuthProvider, useAuth } from './src/contexts/AuthContext';
 
 const Stack = createNativeStackNavigator();
 
 export default function App() {
+  return (
+    <AuthProvider>
+      <AppConteudo />
+    </AuthProvider>
+  );
+}
+
+function AppConteudo() {
   const [isLoading, setIsLoading] = useState(true);
+  const { carregando, usuario, papel } = useAuth();
 
   const handleSplashFinish = () => {
     setIsLoading(false);
@@ -31,6 +43,25 @@ export default function App() {
     return (
       <SafeAreaProvider>
         <SplashScreen onFinish={handleSplashFinish} />
+      </SafeAreaProvider>
+    );
+  }
+
+  if (carregando) {
+    return (
+      <SafeAreaProvider>
+        <View style={styles.carregando}>
+          <ActivityIndicator size="large" color="#ff9800" />
+        </View>
+      </SafeAreaProvider>
+    );
+  }
+
+  // Sem login, ou logado sem papel de equipe/admin: só a tela de login.
+  if (!usuario || (papel !== 'admin' && papel !== 'equipe')) {
+    return (
+      <SafeAreaProvider>
+        <LoginScreen />
       </SafeAreaProvider>
     );
   }
@@ -115,3 +146,7 @@ export default function App() {
     </SafeAreaProvider>
   );
 }
+
+const styles = StyleSheet.create({
+  carregando: { flex: 1, justifyContent: 'center' },
+});

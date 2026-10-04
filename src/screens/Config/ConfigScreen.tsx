@@ -10,12 +10,14 @@ import {
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/MaterialIcons';
+import { useAuth } from '../../contexts/AuthContext';
 
 type ConfigScreenProps = NativeStackScreenProps<any, 'Config'>;
 
 export default function ConfigScreen({ navigation }: ConfigScreenProps) {
   const { width } = useWindowDimensions();
   const isTablet = width >= 768;
+  const { isAdmin, sair, usuario } = useAuth();
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -62,17 +64,19 @@ export default function ConfigScreen({ navigation }: ConfigScreenProps) {
 
          {/* Botões de funcionalidades */}
          <View style={styles.buttonsContainer}>
-           <TouchableOpacity
-             style={styles.functionButton}
-             onPress={() => navigation.navigate('AdicionarSabor')}
-             activeOpacity={0.8}
-           >
-             <View style={styles.buttonIconContainer}>
-               <Icon name="restaurant-menu" size={24} color="#1976d2" />
-             </View>
-             <Text style={styles.buttonText}>Gerenciar Cardápio</Text>
-             <Icon name="chevron-right" size={20} color="#9ca3af" />
-           </TouchableOpacity>
+           {isAdmin && (
+             <TouchableOpacity
+               style={styles.functionButton}
+               onPress={() => navigation.navigate('AdicionarSabor')}
+               activeOpacity={0.8}
+             >
+               <View style={styles.buttonIconContainer}>
+                 <Icon name="restaurant-menu" size={24} color="#1976d2" />
+               </View>
+               <Text style={styles.buttonText}>Gerenciar Cardápio</Text>
+               <Icon name="chevron-right" size={20} color="#9ca3af" />
+             </TouchableOpacity>
+           )}
 
            <TouchableOpacity
              style={styles.functionButton}
@@ -83,6 +87,18 @@ export default function ConfigScreen({ navigation }: ConfigScreenProps) {
                <Icon name="people" size={24} color="#1e3a8a" />
              </View>
              <Text style={styles.buttonText}>Monitor de Clientes</Text>
+             <Icon name="chevron-right" size={20} color="#9ca3af" />
+           </TouchableOpacity>
+
+           <TouchableOpacity
+             style={styles.functionButton}
+             onPress={sair}
+             activeOpacity={0.8}
+           >
+             <View style={styles.buttonIconContainer}>
+               <Icon name="logout" size={24} color="#b91c1c" />
+             </View>
+             <Text style={styles.buttonText}>Sair ({usuario?.email})</Text>
              <Icon name="chevron-right" size={20} color="#9ca3af" />
            </TouchableOpacity>
          </View>

@@ -220,3 +220,69 @@ body {
     height: 120px;
   }
 }
+
+/* LOGIN DO MONITOR */
+.login-tela {
+  align-items: center;
+  justify-content: center;
+}
+
+.login-card {
+  background: var(--branco);
+  border-radius: 16px;
+  padding: 32px;
+  width: min(360px, 100%);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.login-card h1 {
+  font-size: 22px;
+  color: var(--azul);
+  margin-bottom: 8px;
+}
+
+.login-card input {
+  padding: 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 16px;
+}
+
+.login-card button {
+  padding: 12px;
+  border: 0;
+  border-radius: 8px;
+  background: var(--azul);
+  color: var(--branco);
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.login-card button:disabled {
+  opacity: 0.6;
+}
+
+.login-erro {
+  color: var(--vermelho);
+}
+
+.login-sair {
+  position: fixed;
+  right: 8px;
+  bottom: 8px;
+  padding: 4px 10px;
+  border: 0;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.15);
+  color: var(--branco);
+  font-size: 12px;
+  cursor: pointer;
+  opacity: 0.4;
+}
+
+.login-sair:hover {
+  opacity: 1;
+}

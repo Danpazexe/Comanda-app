@@ -442,23 +442,24 @@ export class FirestoreService {
   }
 
   // Registrar vendas no relatório
+  // Usa FieldValue.increment (sem ler o documento): a equipe pode somar vendas,
+  // mas pelas regras só o admin lê ou limpa o relatório.
   static async registrarVendas(itens: string[]): Promise<void> {
     try {
-      const relatorioRef = firestore()
-        .collection(RELATORIO_COLLECTION)
-        .doc('vendas');
-
-      await firestore().runTransaction(async (transaction) => {
-        const doc = await transaction.get(relatorioRef);
-        const vendas = doc.exists ? doc.data()?.vendas || {} : {};
-
-        // Contar os itens vendidos
-        itens.forEach(item => {
-          vendas[item] = (vendas[item] || 0) + 1;
-        });
-
-        transaction.set(relatorioRef, { vendas }, { merge: true });
+      const contagem: Record<string, number> = {};
+      itens.forEach(item => {
+        contagem[item] = (contagem[item] || 0) + 1;
       });
+
+      const vendas: Record<string, any> = {};
+      Object.entries(contagem).forEach(([item, qtd]) => {
+        vendas[item] = firestore.FieldValue.increment(qtd);
+      });
+
+      await firestore()
+        .collection(RELATORIO_COLLECTION)
+        .doc('vendas')
+        .set({ vendas }, { merge: true });
     } catch (error) {
       console.error('Erro ao registrar vendas:', error);
       throw error;

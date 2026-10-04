@@ -1,0 +1,12 @@
+rules_version = '2';
+
+// O app não usa o Cloud Storage (o monitor web só inicializa o SDK).
+// Tudo fica negado até existir um uso real; nesse dia, libere só o caminho
+// necessário e exija login (request.auth != null) e tipo/tamanho do arquivo.
+service firebase.storage {
+  match /b/{bucket}/o {
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}
