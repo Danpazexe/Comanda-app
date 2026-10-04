@@ -1,0 +1,128 @@
+rules_version = '2';
+
+// Regras do Firestore do Comanda App.
+//
+// Papéis (definidos SÓ pelo dono, no console do Firebase):
+//   usuarios/{uid}.papel == 'admin'   -> tudo, inclusive "Zerar tudo", cardápio e relatório
+//   usuarios/{uid}.papel == 'equipe'  -> cria/edita comandas e muda status
+//   usuarios/{uid}.papel == 'monitor' -> só lê comandas (telão web)
+// Também vale como admin um custom claim `admin: true` no token.
+// Quem faz login mas não tem documento em `usuarios` não acessa nada.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function logado() {
+      return request.auth != null;
+    }
+
+    function perfilPath() {
+      return /databases/$(database)/documents/usuarios/$(request.auth.uid);
+    }
+
+    function papel() {
+      return logado() && exists(perfilPath())
+        ? get(perfilPath()).data.get('papel', '')
+        : '';
+    }
+
+    function isAdmin() {
+      return logado() && (request.auth.token.get('admin', false) == true || papel() == 'admin');
+    }
+
+    function isEquipe() {
+      return isAdmin() || papel() == 'equipe';
+    }
+
+    function isMonitor() {
+      return isEquipe() || papel() == 'monitor';
+    }
+
+    // ---------- usuarios: só o console (Admin SDK) escreve ----------
+    match /usuarios/{uid} {
+      allow read: if logado() && (request.auth.uid == uid || isAdmin());
+      allow write: if false;
+    }
+
+    // ---------- comandas ----------
+    function statusValido(s) {
+      return s in ['aberta', 'preparando', 'pronto', 'chamado', 'entregue'];
+    }
+
+    function comandaValida(d) {
+      return d.keys().hasOnly(['numero', 'nomeCliente', 'itens', 'status', 'timestamp',
+                               'horaAtendimento', 'horaPronto', 'totalSementes'])
+        && d.keys().hasAll(['numero', 'itens', 'status', 'timestamp'])
+        && d.numero is int && d.numero > 0 && d.numero < 1000000
+        && d.itens is list && d.itens.size() <= 100
+        && statusValido(d.status)
+        && d.timestamp is timestamp
+        && (!('nomeCliente' in d) || d.nomeCliente == null
+            || (d.nomeCliente is string && d.nomeCliente.size() <= 60))
+        && (!('totalSementes' in d)
+            || (d.totalSementes is number && d.totalSementes >= 0 && d.totalSementes <= 100000))
+        && (!('horaAtendimento' in d) || d.horaAtendimento is timestamp)
+        && (!('horaPronto' in d) || d.horaPronto is timestamp);
+    }
+
+    match /comandas/{comandaId} {
+      allow read: if isMonitor();
+      allow create: if isEquipe()
+        && comandaValida(request.resource.data)
+        && request.resource.data.status == 'aberta';
+      allow update: if isEquipe()
+        && comandaValida(request.resource.data)
+        && request.resource.data.numero == resource.data.numero;
+      // Apagar (individual ou "Zerar tudo") só admin.
+      allow delete: if isAdmin();
+    }
+
+    // ---------- cardapio: equipe lê, só admin altera ----------
+    match /cardapio/{itemId} {
+      allow read: if isEquipe();
+      allow create, update: if isAdmin()
+        && request.resource.data.keys().hasOnly(['nome', 'valor'])
+        && request.resource.data.nome is string && request.resource.data.nome.size() > 0
+        && request.resource.data.nome.size() <= 60
+        && request.resource.data.valor is string && request.resource.data.valor.size() <= 20;
+      allow delete: if isAdmin();
+    }
+
+    // ---------- relatorio/vendas ----------
+    // Só admin lê e limpa. A equipe só soma vendas (FieldValue.increment) e
+    // não consegue remover itens do relatório.
+    match /relatorio/{docId} {
+      allow read, delete: if isAdmin();
+      allow create: if isAdmin()
+        || (isEquipe() && docId == 'vendas'
+            && request.resource.data.keys().hasOnly(['vendas'])
+            && request.resource.data.vendas is map);
+      allow update: if isAdmin()
+        || (isEquipe() && docId == 'vendas'
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['vendas'])
+            && request.resource.data.vendas is map
+            && request.resource.data.vendas.keys().hasAll(resource.data.get('vendas', {}).keys()));
+    }
+
+    // ---------- config/contadores ----------
+    // Equipe soma ou subtrai 1 no contador; zerar é só admin.
+    match /config/{docId} {
+      allow read: if isEquipe();
+      allow create: if isAdmin()
+        || (isEquipe() && docId == 'contadores'
+            && request.resource.data.keys().hasOnly(['comandasAtendidas'])
+            && request.resource.data.comandasAtendidas in [0, 1]);
+      allow update: if isAdmin()
+        || (isEquipe() && docId == 'contadores'
+            && request.resource.data.keys().hasOnly(['comandasAtendidas'])
+            && request.resource.data.comandasAtendidas is int
+            && request.resource.data.comandasAtendidas >= 0
+            && request.resource.data.comandasAtendidas - resource.data.get('comandasAtendidas', 0) in [-1, 0, 1]);
+      allow delete: if isAdmin();
+    }
+
+    // Qualquer outra coleção: negado.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "name": "comanda-rules-tests",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Testes das regras do Firestore/Storage com o Firebase Emulator",
+  "scripts": {
+    "test": "firebase emulators:exec --config ../firebase.json --only firestore,storage --project demo-comanda \"node --test\""
+  },
+  "devDependencies": {
+    "@firebase/rules-unit-testing": "^5.0.2",
+    "firebase": "^12.0.0",
+    "firebase-tools": "^15.0.0"
+  }
+}

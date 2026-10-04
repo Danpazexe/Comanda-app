@@ -12,6 +12,7 @@ import {
 import { useNavigation, NavigationProp } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { FirestoreService } from '../../services/firestoreService';
+import { useAuth } from '../../contexts/AuthContext';
 
 interface Item {
   nome: string;
@@ -34,6 +35,11 @@ export default function EditarScreen() {
   const [isZerando, setIsZerando] = useState(false);
   const [comandasNaoEditaveis, setComandasNaoEditaveis] = useState<Set<number>>(new Set());
   const navigation = useNavigation<NavigationProp<any>>();
+  const { isAdmin } = useAuth();
+
+  function avisarSomenteAdmin() {
+    Alert.alert('Sem permissão', 'Somente administradores podem excluir comandas.');
+  }
 
   const filtrarEOrdenarComandas = useCallback(() => {
     let comandasProcessadas = [...comandas];
@@ -124,6 +130,10 @@ export default function EditarScreen() {
 
   // Adicionar função para excluir comanda do Firebase
   async function excluirComanda(comanda: ComandaFechada) {
+    if (!isAdmin) {
+      avisarSomenteAdmin();
+      return;
+    }
     Alert.alert(
       'Excluir Comanda',
       'Tem certeza que deseja excluir esta comanda?',
@@ -224,6 +234,10 @@ export default function EditarScreen() {
   }
 
   function zerarTudo() {
+    if (!isAdmin) {
+      avisarSomenteAdmin();
+      return;
+    }
     Alert.alert(
       'Zerar Tudo',
       'Tem certeza que deseja apagar todas as comandas do Firestore, relatório e contador?\n\nEsta ação não pode ser desfeita!',

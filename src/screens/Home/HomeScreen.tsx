@@ -12,6 +12,7 @@ import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
+import { useAuth } from '../../contexts/AuthContext';
 
 const TROFEU = require('../../assets/LOGOSEMFUNDO.png');
 
@@ -60,6 +61,7 @@ function AnimatedButton({ onPress, gradient, children, style, icon, iconSize = 2
 export default function HomeScreen({ navigation }: NativeStackScreenProps<any, 'Home'>) {
   const { width, height } = useWindowDimensions();
   const [animValue] = useState(new Animated.Value(0));
+  const { isAdmin } = useAuth();
 
   const isLandscape = width > height;
   const isTablet = width >= 768;
@@ -109,15 +111,17 @@ export default function HomeScreen({ navigation }: NativeStackScreenProps<any, '
             Nova Comanda
           </AnimatedButton>
 
-          <AnimatedButton
-            onPress={() => navigation.navigate('Relatorio')}
-            gradient={['#43a047', '#81c784']}
-            style={styles.buttonWrapper}
-            icon="chart-bar"
-            iconSize={28}
-          >
-            Relatório
-          </AnimatedButton>
+          {isAdmin && (
+            <AnimatedButton
+              onPress={() => navigation.navigate('Relatorio')}
+              gradient={['#43a047', '#81c784']}
+              style={styles.buttonWrapper}
+              icon="chart-bar"
+              iconSize={28}
+            >
+              Relatório
+            </AnimatedButton>
+          )}
 
           <AnimatedButton
             onPress={() => navigation.navigate('CozinhaMonitor')}

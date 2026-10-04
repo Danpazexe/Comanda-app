@@ -28,7 +28,6 @@ const App: React.FC = () => {
   }, []);
 
   const renderLista = (lista: PedidoMonitor[]) => {
-    console.log('Renderizando lista:', lista.length, 'itens:', lista.map(p => p.nomeCliente));
     return lista.length === 0 ? (
       <div className="placeholder">—</div>
     ) : (
@@ -56,12 +55,6 @@ const App: React.FC = () => {
 
     // LÓGICA: Máximo 4 pedidos no centro (1 gigante + 3 baixo), resto vai para direita
     const pedidosCentro = pedidosProntos.slice(-4); // Últimos 4
-    const pedidosDireita = pedidosProntos.slice(0, -4).reverse(); // Todos os outros (mais recente primeiro)
-
-    // Atualizar estado dos pedidos que vão para direita
-    if (pedidosDireita.length > 0) {
-      console.log('📤 Movendo para direita:', pedidosDireita.map(p => p.nomeCliente));
-    }
 
     const ultimoChamado = pedidosCentro[pedidosCentro.length - 1]; // Último da lista (PEDIDO 6)
     const anteriores = pedidosCentro.slice(0, -1); // 3 anteriores (PEDIDO 3, 4, 5)

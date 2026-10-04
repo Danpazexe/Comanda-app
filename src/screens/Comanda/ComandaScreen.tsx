@@ -19,6 +19,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useIsFocused } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { FirestoreService } from '../../services/firestoreService';
+import { useAuth } from '../../contexts/AuthContext';
 import { Item } from '../../types/Comanda';
 import { useNavigation } from '@react-navigation/native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
@@ -200,6 +201,7 @@ export default function ComandaScreen({ route }: Props) {
   const { width, height } = useWindowDimensions();
   const isFocused = useIsFocused();
   const navigation = useNavigation<any>();
+  const { isAdmin } = useAuth();
 
   // Animações para o Bottom Sheet
   const bottomSheetAnim = useRef(new Animated.Value(0)).current;
@@ -302,8 +304,10 @@ export default function ComandaScreen({ route }: Props) {
   useEffect(() => {
     async function carregarCardapio() {
       try {
-        // Inicializar cardápio se necessário
-        await FirestoreService.inicializarCardapio();
+        // Inicializar cardápio se necessário (só admin pode gravar no cardápio)
+        if (isAdmin) {
+          await FirestoreService.inicializarCardapio();
+        }
         
         // Carregar cardápio do Firebase
         const cardapioFirebase = await FirestoreService.buscarCardapio();
@@ -314,7 +318,7 @@ export default function ComandaScreen({ route }: Props) {
       }
     }
     carregarCardapio();
-  }, []);
+  }, [isAdmin]);
 
   useEffect(() => {
     if (route?.params?.comandaParaEditar) {

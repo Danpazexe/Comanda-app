@@ -1,3 +1,69 @@
+# Comanda App
+
+## Segurança (leia antes de publicar)
+
+> **Aviso:** até o dono publicar as regras (`firebase deploy --only firestore:rules,storage`), ativar o App Check e restringir a chave de API, **o banco continua aberto**. Hoje qualquer pessoa com a configuração pública do projeto pode ler, alterar ou apagar comandas, cardápio e relatório. As regras deste repositório só valem depois do deploy.
+
+### Como o acesso funciona agora
+
+- **Login com e-mail e senha (Firebase Auth)** no app e no monitor web. Não há cadastro pelo app: o dono cria as contas no console.
+- **Papel por usuário** no documento `usuarios/{uid}` do Firestore, campo `papel`:
+
+| Papel | O que pode |
+|---|---|
+| `admin` | Tudo: apagar comandas e "Zerar tudo", gerenciar o cardápio, ver e limpar o relatório, zerar o contador. Também vale um custom claim `admin: true`. |
+| `equipe` | Criar e editar comandas, mudar o status, ler o cardápio, somar vendas no relatório (sem ler nem limpar) e somar ou subtrair 1 no contador. |
+| `monitor` | Só ler comandas. É a conta do telão (monitor web). |
+
+- Quem faz login, mas não tem documento em `usuarios`, não acessa nada. Isso vale também para contas criadas por terceiros com a chave pública.
+- Ninguém altera `usuarios` pelo app, nem um admin. Só o console ou o Admin SDK.
+- As regras também validam os campos da comanda: `status` dentro da lista, `numero` inteiro positivo e imutável, `totalSementes` ≥ 0, nome com até 60 caracteres e nenhum campo extra.
+- O Storage fica todo negado, porque o app não usa.
+
+**Por que e-mail e senha, e não login anônimo:** com a chave de API pública, qualquer pessoa consegue criar um usuário anônimo. Uma regra `request.auth != null` com login anônimo não protege nada sem App Check. Contas criadas pelo dono, junto com o papel em `usuarios/{uid}`, são a menor mudança que torna as regras eficazes.
+
+### Passo a passo para o dono (fora do código)
+
+Faça nesta ordem. Se publicar as regras antes de os aparelhos terem o app novo, o app antigo (sem login) para de funcionar.
+
+1. **Ativar o login.** No console do Firebase, abra Authentication → Sign-in method e ative **E-mail/senha**. Se o projeto tiver a opção (Authentication → Settings → User actions), desmarque "Enable create (sign-up)" para ninguém se cadastrar sozinho.
+2. **Criar as contas.** Em Authentication → Users, crie uma conta por pessoa e uma para o telão. Copie o **UID** de cada uma.
+3. **Dar os papéis.** No Firestore, crie a coleção `usuarios` com um documento por UID (o ID do documento é o próprio UID), por exemplo `{ papel: "admin" }`, `{ papel: "equipe" }` ou `{ papel: "monitor" }`.
+4. **Instalar o app novo em todos os aparelhos.** Rode `npm install` e, no iOS, `cd ios && pod install`, porque o `@react-native-firebase/auth` é nativo. Depois gere o build.
+5. **Publicar o monitor web:** `npm run web:deploy`. O script agora faz `firebase deploy --only hosting`, então não publica as regras sem querer. Faça login no telão com a conta `monitor`.
+6. **Publicar as regras:** `firebase deploy --only firestore:rules,storage`. Depois confira no console (Firestore → Regras) que não sobrou nada em "modo de teste".
+7. **Ativar o App Check:** console → App Check, com Play Integrity no Android e reCAPTCHA Enterprise no web. Acompanhe as métricas e só então ligue o "Enforce" para o Firestore. Atenção: o código do app **ainda não** envia token do App Check, porque isso exige o `@react-native-firebase/app-check` e configuração nativa. Por isso não ligue o Enforce antes de integrar esse SDK, ou o app para de funcionar.
+8. **Restringir a chave de API** no Google Cloud Console (APIs e serviços → Credenciais):
+   - Chave Android: restrita ao pacote `com.ComandaApp` + SHA-1 do certificado de release.
+   - Chave web: restrita aos referenciadores `https://comandaapp-797db.web.app/*` e `https://comandaapp-797db.firebaseapp.com/*`.
+   - Nas duas: limitar às APIs usadas (Firestore, Identity Toolkit, Token Service).
+
+### Testar as regras
+
+As regras têm testes com o Firebase Emulator, em `rules-tests/`. O teste usa um projeto fictício (`demo-comanda`) e não toca no Firebase real. Precisa de Java 21 ou mais novo.
+
+```sh
+cd rules-tests
+npm install
+npm test
+```
+
+### Build de produção
+
+- **App:** no bundle de release, o `babel-plugin-transform-remove-console` remove todos os `console.*` (ver `babel.config.js`).
+- **Monitor web:**
+  - O build não gera mais sourcemap (`sourcemap: false`) e remove `console.*`.
+  - O hosting ignora `*.map`, então um `.map` antigo esquecido em `web/dist` não é publicado.
+  - O hosting envia headers de segurança (`X-Frame-Options`, `nosniff`, `Referrer-Policy`, CSP `frame-ancestors`).
+
+### Próximos passos (não feitos aqui)
+
+- **Número e total da comanda calculados no servidor.** Hoje o app calcula `numero` (último + 1) e `totalSementes`. As regras validam tipo e faixa, mas não conferem o total contra o cardápio, e dois aparelhos ainda podem gerar o mesmo número ao mesmo tempo. Resolver isso de verdade exige **Cloud Functions**, por exemplo uma função `criarComanda` que lê o cardápio, calcula o total e gera o número em transação. As regras passariam então a negar `create` direto do cliente.
+- Integrar o App Check no código (ver passo 7).
+- Uma CSP completa para o monitor web (`script-src`/`connect-src`), depois de testar com o Firebase.
+
+---
+
 This is a new [**React Native**](https://reactnative.dev) project, bootstrapped using [`@react-native-community/cli`](https://github.com/react-native-community/cli).
 
 # Getting Started
